@@ -19,12 +19,12 @@ import java.util.logging.Logger;
 class JadedLibsInst {
 	private final Logger logger = Logger.getLogger("JadedLibs");
 	private final File mcDir, modsDir;
-	private ArrayList<String> depMap;
+	private ArrayList<Dependency> depMap;
 	private String repo;
 	private IDownloader downloadMonitor;
 
 	JadedLibsInst() {
-		depMap = new ArrayList<String>();
+		depMap = new ArrayList<Dependency>();
 		mcDir = (File) FMLInjectionData.data()[6];
 		modsDir = new File(mcDir, "mods");
 	}
@@ -52,10 +52,10 @@ class JadedLibsInst {
 		repo = root.getStringValue("repo");
 		if(root.hasElements()) {
 			for(final JsonNode node : root.getElements()) {
-				depMap.add(node.getStringValue("file"));
+				depMap.add(new Dependency(node.getStringValue("file"), node.getStringValue("repo")));
 			}
 		} else {
-			depMap.add(root.getStringValue("file"));
+			depMap.add(new Dependency(root.getStringValue("file"), root.getStringValue("repo")));
 		}
 		reader.close();
 	}
@@ -64,7 +64,7 @@ class JadedLibsInst {
 		downloadMonitor = FMLLaunchHandler.side().isClient() ? new Downloader() : new DummyDownloader();
 		JDialog popupWindow = (JDialog) downloadMonitor.makeDialog();
 		try {
-			for(String dependency : depMap) {
+			for(final Dependency dependency : depMap) {
 				download(dependency);
 			}
 		} finally {
@@ -75,8 +75,8 @@ class JadedLibsInst {
 		}
 	}
 
-	private void download(final String dependency) {
-		final File target = new File(modsDir, dependency);
+	private void download(final Dependency dependency) {
+		final File target = new File(modsDir, dependency.file);
 		if(target.exists()) {
 			return;
 		}
@@ -96,7 +96,7 @@ class JadedLibsInst {
 				logger.warning("You have stopped the download before it could be completed");
 				System.exit(1);
 			}
-			downloadMonitor.showErrorDialog(dependency, repo + dependency);
+			downloadMonitor.showErrorDialog(dependency.file, dependency.repo + dependency.file);
 			throw new RuntimeException("Download error", e);
 		}
 	}
@@ -106,27 +106,28 @@ class JadedLibsInst {
 		int read, length = 0;
 		try {
 			downloadMonitor.setThread(Thread.currentThread());
+			FileOutputStream output = new FileOutputStream(target);
 			byte[] buffer = new byte[1024];
-			while((read = input.read(buffer)) >= 0) {
-				// Download bits?
-				length += read;
+			while((read = input.read(buffer, 0, 1024)) != -1) {
 				if(downloadMonitor.shouldStop()) {
 					break;
 				}
+				output.write(buffer, 0, read);
+				length += read;
 				downloadMonitor.updateProgress(length);
 			}
 			input.close();
 			downloadMonitor.setThread(null);
 		} catch(final InterruptedIOException e) {
 			Thread.interrupted();
+			target.delete();
 			throw new Exception("Stop");
 		}
-		// write file
 	}
 
 	private void activateDeps() {
-		for(final String dep : depMap) {
-			final File mod = new File(modsDir, dep);
+		for(final Dependency dep : depMap) {
+			final File mod = new File(modsDir, dep.file);
 			JarFile jar = null;
 			try {
 				jar = new JarFile(mod);
