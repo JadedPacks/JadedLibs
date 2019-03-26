@@ -1,0 +1,65 @@
+buildscript {
+	repositories {
+		jcenter()
+		maven {
+			name = "forge"
+			url = "http://files.minecraftforge.net/maven"
+		}
+	}
+	dependencies {
+		classpath 'net.minecraftforge.gradle:ForgeGradle:1.0-SNAPSHOT'
+	}
+}
+
+apply plugin: 'forge'
+
+new File('gradle.properties').withReader {
+	def prop = new Properties()
+	prop.load(it)
+	project.ext.config = new ConfigSlurper().parse prop
+}
+
+version = "${config.minecraftVersion}-${config.modVersion}"
+group = "com.jadedpacks"
+archivesBaseName = "JadedLibs"
+
+minecraft {
+	version = "${config.minecraftVersion}-${config.forgeVersion}"
+	//runDir = "run"
+	//mappings = config.mcpMappings
+	replace "@VERSION@", config.modVersion
+}
+
+dependencies {
+	compile "net.sourceforge.argo:argo:2.25"
+}
+
+def root = project.projectDir.parentFile
+sourceSets {
+	main {
+		java {
+			srcDir new File(root, "src")
+		}
+		resources {
+			srcDir new File(root, "resources")
+		}
+	}
+}
+
+processResources {
+	inputs.property "version", project.version
+	inputs.property "mcversion", project.minecraft.version
+	from(sourceSets.main.resources.srcDirs) {
+		include 'mcmod.info'
+		expand 'version': project.version, 'mcversion': project.minecraft.version
+	}
+	from(sourceSets.main.resources.srcDirs) {
+		exclude 'mcmod.info'
+	}
+}
+
+jar {
+	manifest {
+		attributes 'FMLCorePlugin': 'com.jadedpacks.jadedlibs.JadedLibsCorePlugin'
+	}
+}

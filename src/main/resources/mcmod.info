@@ -1,0 +1,16 @@
+[{
+	"modid": "jadedlibs",
+	"name": "JadedLibs",
+	"description": "Custom Jaded Packs lib loader",
+	"version": "${version}",
+	"mcversion": "${mcversion}",
+	"url": "",
+	"updateUrl": "",
+	"authorList": [
+		"Developaws"
+	],
+	"credits": "Copyright JadedPacks",
+	"logoFile": "",
+	"screenshots": [],
+	"dependencies": []
+}]

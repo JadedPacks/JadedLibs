@@ -1,0 +1,26 @@
+# Compiled stuff
+*.class
+*.jar
+
+# IDEA stuff
+main.iml
+/.idea/
+
+#Eclipse stuff
+/eclipse/
+
+# Gradle stuff
+/.gradle/
+/bin/
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Testing stuff
+/config/
+/crash-reports/
+/logs/
+/mods/
+/saves/
+/screenshots/
+/options.txt
+/usernamecache.json
