@@ -63,7 +63,7 @@ class Downloader extends JOptionPane implements IDownloader {
 				}
 			}
 		});
-		container = new JDialog(null, "Hello", Dialog.ModalityType.MODELESS);
+		container = new JDialog(null, "JadedPacks Downloader", Dialog.ModalityType.MODELESS);
 		container.setResizable(false);
 		container.setLocationRelativeTo(null);
 		container.add(this);
