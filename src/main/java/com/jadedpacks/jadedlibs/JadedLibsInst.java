@@ -12,10 +12,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
 import java.util.jar.JarFile;
-import java.util.logging.Logger;
 
 class JadedLibsInst {
-	private final Logger logger = Logger.getLogger("JadedLibs");
 	private final File mcDir, modsDir;
 	private ArrayList<Dependency> depMap;
 	private IDownloader downloadMonitor;
@@ -74,22 +72,23 @@ class JadedLibsInst {
 	private void download(final Dependency dependency) {
 		final File target = new File(modsDir, dependency.file);
 		if(target.exists()) {
+			System.out.println("File already exists; Skipping: " + dependency.file);
 			return;
 		}
 		try {
-			final URL url = new URL(dependency.repo + dependency.file);
-			downloadMonitor.updateProgressString("Downloading file " + dependency.file);
-			logger.info("Downloading file " + dependency.file);
+			final URL url = new URL(dependency.repo + dependency.file.replace(" ", "%20"));
+			downloadMonitor.updateProgressString("Downloading file '" + dependency.file + "'");
+			System.out.println("Downloading file '" + dependency.file + "' from url '" + url.toString());
 			final URLConnection connection = url.openConnection();
 			connection.setConnectTimeout(5000);
 			connection.setReadTimeout(5000);
 			connection.setRequestProperty("User-Agent", "JadedPacks Downloader");
 			download(connection.getInputStream(), connection.getContentLength(), target);
 			downloadMonitor.updateProgressString("Download complete");
-			logger.info("Download complete");
+			System.out.println("Download complete");
 		} catch(final Exception e) {
 			if(downloadMonitor.shouldStop()) {
-				logger.warning("You have stopped the download before it could be completed");
+				System.err.println("You have stopped the download before it could be completed");
 				System.exit(1);
 			}
 			downloadMonitor.showErrorDialog(dependency.file, dependency.repo + dependency.file);
@@ -131,7 +130,7 @@ class JadedLibsInst {
 					((LaunchClassLoader) JadedLibsInst.class.getClassLoader()).addURL(mod.toURI().toURL());
 				}
 			} catch(final IOException e) {
-				logger.warning("Unable to read the jar file " + dep + " - ignoring");
+				System.err.println("Unable to read the jar file " + dep + " - ignoring");
 				e.printStackTrace();
 			} finally {
 				try {
