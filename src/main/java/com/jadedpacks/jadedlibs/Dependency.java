@@ -1,10 +1,16 @@
 package com.jadedpacks.jadedlibs;
 
-public class Dependency {
+import com.google.gson.JsonObject;
+
+class Dependency {
 	final String file, repo;
 
-	public Dependency(final String file, final String repo) {
-		this.file = file;
+	Dependency(final JsonObject node) {
+		this.file = node.get("file").getAsString();
+		String repo = node.get("repo").getAsString();
+		if(!repo.endsWith("/")) {
+			repo += "/";
+		}
 		this.repo = repo;
 	}
 }

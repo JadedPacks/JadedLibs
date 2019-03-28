@@ -1,9 +1,7 @@
 package com.jadedpacks.jadedlibs;
 
-import argo.jdom.JdomParser;
-import argo.jdom.JsonNode;
-import argo.jdom.JsonRootNode;
-import argo.saj.InvalidSyntaxException;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import cpw.mods.fml.relauncher.FMLInjectionData;
 import cpw.mods.fml.relauncher.FMLLaunchHandler;
 import net.minecraft.launchwrapper.LaunchClassLoader;
@@ -20,7 +18,6 @@ class JadedLibsInst {
 	private final Logger logger = Logger.getLogger("JadedLibs");
 	private final File mcDir, modsDir;
 	private ArrayList<Dependency> depMap;
-	private String repo;
 	private IDownloader downloadMonitor;
 
 	JadedLibsInst() {
@@ -46,16 +43,15 @@ class JadedLibsInst {
 		activateDeps();
 	}
 
-	private void loadJSON(final File file) throws IOException, InvalidSyntaxException {
+	private void loadJSON(final File file) throws IOException {
 		final InputStreamReader reader = new InputStreamReader(new FileInputStream(file));
-		final JsonRootNode root = new JdomParser().parse(reader);
-		repo = root.getStringValue("repo");
-		if(root.hasElements()) {
-			for(final JsonNode node : root.getElements()) {
-				depMap.add(new Dependency(node.getStringValue("file"), node.getStringValue("repo")));
+		final JsonElement root = new JsonParser().parse(reader);
+		if(root.isJsonArray()) {
+			for(final JsonElement node : root.getAsJsonArray()) {
+				depMap.add(new Dependency(node.getAsJsonObject()));
 			}
 		} else {
-			depMap.add(new Dependency(root.getStringValue("file"), root.getStringValue("repo")));
+			depMap.add(new Dependency(root.getAsJsonObject()));
 		}
 		reader.close();
 	}
@@ -81,9 +77,9 @@ class JadedLibsInst {
 			return;
 		}
 		try {
-			final URL url = new URL(repo + dependency);
-			downloadMonitor.updateProgressString("Downloading file " + dependency);
-			logger.info("Downloading file " + dependency);
+			final URL url = new URL(dependency.repo + dependency.file);
+			downloadMonitor.updateProgressString("Downloading file " + dependency.file);
+			logger.info("Downloading file " + dependency.file);
 			final URLConnection connection = url.openConnection();
 			connection.setConnectTimeout(5000);
 			connection.setReadTimeout(5000);

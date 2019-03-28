@@ -31,7 +31,7 @@ minecraft {
 }
 
 dependencies {
-	compile "net.sourceforge.argo:argo:2.25"
+	compile "com.google.code.gson:gson:2.2.2"
 }
 
 def root = project.projectDir.parentFile
