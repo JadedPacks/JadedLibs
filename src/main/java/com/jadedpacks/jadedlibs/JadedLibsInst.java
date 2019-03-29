@@ -19,8 +19,6 @@ class JadedLibsInst {
 	private IDownloader downloadMonitor;
 
 	JadedLibsInst() {
-		depMap = new ArrayList<Dependency>();
-		depLoad = new ArrayList<Dependency>();
 		mcDir = (File) FMLInjectionData.data()[6];
 		modsDir = new File(mcDir, "mods");
 	}
@@ -30,6 +28,8 @@ class JadedLibsInst {
 		if(!file.exists()) {
 			return;
 		}
+		depMap = new ArrayList<Dependency>();
+		depLoad = new ArrayList<Dependency>();
 		try {
 			loadJSON(file);
 		} catch(Exception e) {
