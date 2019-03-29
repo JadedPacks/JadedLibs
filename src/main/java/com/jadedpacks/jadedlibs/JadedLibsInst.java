@@ -73,6 +73,7 @@ class JadedLibsInst {
 		final File target = new File(modsDir, dependency.file);
 		if(target.exists()) {
 			System.out.println("File already exists; Skipping: " + dependency.file);
+			depMap.remove(dependency);
 			return;
 		}
 		try {
