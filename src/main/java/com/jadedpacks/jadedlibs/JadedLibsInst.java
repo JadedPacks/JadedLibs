@@ -15,11 +15,12 @@ import java.util.jar.JarFile;
 
 class JadedLibsInst {
 	private final File mcDir, modsDir;
-	private ArrayList<Dependency> depMap;
+	private ArrayList<Dependency> depMap, depLoad;
 	private IDownloader downloadMonitor;
 
 	JadedLibsInst() {
 		depMap = new ArrayList<Dependency>();
+		depLoad = new ArrayList<Dependency>();
 		mcDir = (File) FMLInjectionData.data()[6];
 		modsDir = new File(mcDir, "mods");
 	}
@@ -73,7 +74,6 @@ class JadedLibsInst {
 		final File target = new File(modsDir, dependency.file);
 		if(target.exists()) {
 			System.out.println("File already exists; Skipping: " + dependency.file);
-			depMap.remove(dependency);
 			return;
 		}
 		try {
@@ -87,6 +87,7 @@ class JadedLibsInst {
 			download(connection.getInputStream(), connection.getContentLength(), target);
 			downloadMonitor.updateProgressString("Download complete");
 			System.out.println("Download complete");
+			depLoad.add(dependency);
 		} catch(final Exception e) {
 			if(downloadMonitor.shouldStop()) {
 				System.err.println("You have stopped the download before it could be completed");
@@ -122,7 +123,7 @@ class JadedLibsInst {
 	}
 
 	private void activateDeps() {
-		for(final Dependency dep : depMap) {
+		for(final Dependency dep : depLoad) {
 			final File mod = new File(modsDir, dep.file);
 			JarFile jar = null;
 			try {
