@@ -4,18 +4,16 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import cpw.mods.fml.relauncher.FMLInjectionData;
 import cpw.mods.fml.relauncher.FMLLaunchHandler;
-import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import javax.swing.*;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.jar.JarFile;
 
 class JadedLibsInst {
 	private final File mcDir, modsDir;
-	private ArrayList<Dependency> depMap, depLoad;
+	private ArrayList<Dependency> depMap;
 	private IDownloader downloadMonitor;
 
 	JadedLibsInst() {
@@ -29,7 +27,6 @@ class JadedLibsInst {
 			return;
 		}
 		depMap = new ArrayList<Dependency>();
-		depLoad = new ArrayList<Dependency>();
 		try {
 			loadJSON(file);
 		} catch(Exception e) {
@@ -39,7 +36,6 @@ class JadedLibsInst {
 			return;
 		}
 		loadDeps();
-		activateDeps();
 	}
 
 	private void loadJSON(final File file) throws IOException {
@@ -87,7 +83,6 @@ class JadedLibsInst {
 			download(connection.getInputStream(), connection.getContentLength(), target);
 			downloadMonitor.updateProgressString("Download complete");
 			System.out.println("Download complete");
-			depLoad.add(dependency);
 		} catch(final Exception e) {
 			if(downloadMonitor.shouldStop()) {
 				System.err.println("You have stopped the download before it could be completed");
@@ -119,30 +114,6 @@ class JadedLibsInst {
 			Thread.interrupted();
 			target.delete();
 			throw new Exception("Stop");
-		}
-	}
-
-	private void activateDeps() {
-		for(final Dependency dep : depLoad) {
-			final File mod = new File(modsDir, dep.file);
-			JarFile jar = null;
-			try {
-				jar = new JarFile(mod);
-				if(jar.getManifest() != null && jar.getManifest().getMainAttributes().getValue("FMLCorePlugin") != null) {
-					((LaunchClassLoader) JadedLibsInst.class.getClassLoader()).addURL(mod.toURI().toURL());
-				}
-			} catch(final IOException e) {
-				System.err.println("Unable to read the jar file " + dep + " - ignoring");
-				e.printStackTrace();
-			} finally {
-				try {
-					if(jar != null) {
-						jar.close();
-					}
-				} catch(final IOException e) {
-					e.printStackTrace();
-				}
-			}
 		}
 	}
 }
