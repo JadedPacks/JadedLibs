@@ -2,21 +2,32 @@ package com.jadedpacks.jadedlibs;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import cpw.mods.fml.relauncher.CoreModManager;
 import cpw.mods.fml.relauncher.FMLInjectionData;
 import cpw.mods.fml.relauncher.FMLLaunchHandler;
+import cpw.mods.fml.relauncher.FMLRelaunchLog;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import javax.swing.*;
 import java.io.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
+import java.util.jar.Attributes;
+import java.util.jar.JarFile;
 
 class JadedLibsInst {
+	private final boolean isClient;
 	private final File mcDir, modsDir;
+	private LaunchClassLoader loader = (LaunchClassLoader) JadedLibsInst.class.getClassLoader();
 	private ArrayList<Dependency> depMap;
 	private IDownloader downloadMonitor;
 
 	JadedLibsInst() {
+		isClient = FMLLaunchHandler.side().isClient();
 		mcDir = (File) FMLInjectionData.data()[6];
 		modsDir = new File(mcDir, "mods");
 	}
@@ -36,6 +47,7 @@ class JadedLibsInst {
 			return;
 		}
 		loadDeps();
+		activateDeps();
 	}
 
 	private void loadJSON(final File file) throws IOException {
@@ -52,7 +64,7 @@ class JadedLibsInst {
 	}
 
 	private void loadDeps() {
-		downloadMonitor = FMLLaunchHandler.side().isClient() ? new Downloader() : new DummyDownloader();
+		downloadMonitor = isClient ? new Downloader() : new DummyDownloader();
 		JDialog popupWindow = (JDialog) downloadMonitor.makeDialog();
 		try {
 			for(final Dependency dependency : depMap) {
@@ -67,6 +79,10 @@ class JadedLibsInst {
 	}
 
 	private void download(final Dependency dependency) {
+		if(dependency.clientOnly && isClient) {
+			System.out.println("File is a clientOnly mod; Skipping: " + dependency.file);
+			return;
+		}
 		final File target = new File(modsDir, dependency.file);
 		if(target.exists()) {
 			System.out.println("File already exists; Skipping: " + dependency.file);
@@ -114,6 +130,59 @@ class JadedLibsInst {
 			Thread.interrupted();
 			target.delete();
 			throw new Exception("Stop");
+		}
+	}
+
+	private void activateDeps() {
+		for(final Dependency dep : depMap) {
+			File coreMod = new File(modsDir, dep.file);
+			JarFile jar = null;
+			Attributes mfAttributes;
+			try {
+				jar = new JarFile(coreMod);
+				if(jar.getManifest() == null) {
+					return;
+				}
+				mfAttributes = jar.getManifest().getMainAttributes();
+			} catch(IOException e) {
+				System.err.println("Unable to read the jar file " + dep.file + " - ignoring");
+				e.printStackTrace();
+				return;
+			} finally {
+				try {
+					if(jar != null) {
+						jar.close();
+					}
+				} catch(IOException ignored) {}
+			}
+			String fmlCorePlugin = mfAttributes.getValue("FMLCorePlugin");
+			if(fmlCorePlugin == null) {
+				return;
+			}
+			try {
+				loader.addURL(coreMod.toURI().toURL());
+			} catch(MalformedURLException e) {
+				throw new RuntimeException(e);
+			}
+			try {
+				Class<CoreModManager> c = CoreModManager.class;
+				if(!mfAttributes.containsKey(new Attributes.Name("FMLCorePluginContainsFMLMod"))) {
+					FMLRelaunchLog.finest("Adding %s to the list of known coremods, it will not be examined again", coreMod.getName());
+					Field f_loadedCoremods = c.getDeclaredField("loadedCoremods");
+					f_loadedCoremods.setAccessible(true);
+					((List) f_loadedCoremods.get(null)).add(coreMod.getName());
+				} else {
+					FMLRelaunchLog.finest("Found FMLCorePluginContainsFMLMod marker in %s, it will be examined later for regular @Mod instances", coreMod.getName());
+					Field f_reparsedCoremods = c.getDeclaredField("reparsedCoremods");
+					f_reparsedCoremods.setAccessible(true);
+					((List) f_reparsedCoremods.get(null)).add(coreMod.getName());
+				}
+				Method m_loadCoreMod = c.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
+				m_loadCoreMod.setAccessible(true);
+				m_loadCoreMod.invoke(null, loader, fmlCorePlugin, coreMod);
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 }
