@@ -37,7 +37,7 @@ class JadedLibsInst {
 		if(!file.exists()) {
 			return;
 		}
-		depMap = new ArrayList<Dependency>();
+		depMap = new ArrayList<>();
 		try {
 			loadJSON(file);
 		} catch(Exception e) {
@@ -136,10 +136,8 @@ class JadedLibsInst {
 	private void activateDeps() {
 		for(final Dependency dep : depMap) {
 			File coreMod = new File(modsDir, dep.file);
-			JarFile jar = null;
 			Attributes mfAttributes;
-			try {
-				jar = new JarFile(coreMod);
+			try(JarFile jar = new JarFile(coreMod)) {
 				if(jar.getManifest() == null) {
 					return;
 				}
@@ -148,12 +146,6 @@ class JadedLibsInst {
 				System.err.println("Unable to read the jar file " + dep.file + " - ignoring");
 				e.printStackTrace();
 				return;
-			} finally {
-				try {
-					if(jar != null) {
-						jar.close();
-					}
-				} catch(IOException ignored) {}
 			}
 			String fmlCorePlugin = mfAttributes.getValue("FMLCorePlugin");
 			if(fmlCorePlugin == null) {
@@ -167,12 +159,12 @@ class JadedLibsInst {
 			try {
 				Class<CoreModManager> c = CoreModManager.class;
 				if(!mfAttributes.containsKey(new Attributes.Name("FMLCorePluginContainsFMLMod"))) {
-					FMLRelaunchLog.finest("Adding %s to the list of known coremods, it will not be examined again", coreMod.getName());
+					FMLRelaunchLog.finer("Adding %s to the list of known coremods, it will not be examined again", coreMod.getName());
 					Field f_loadedCoremods = c.getDeclaredField("loadedCoremods");
 					f_loadedCoremods.setAccessible(true);
 					((List) f_loadedCoremods.get(null)).add(coreMod.getName());
 				} else {
-					FMLRelaunchLog.finest("Found FMLCorePluginContainsFMLMod marker in %s, it will be examined later for regular @Mod instances", coreMod.getName());
+					FMLRelaunchLog.finer("Found FMLCorePluginContainsFMLMod marker in %s, it will be examined later for regular @Mod instances", coreMod.getName());
 					Field f_reparsedCoremods = c.getDeclaredField("reparsedCoremods");
 					f_reparsedCoremods.setAccessible(true);
 					((List) f_reparsedCoremods.get(null)).add(coreMod.getName());

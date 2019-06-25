@@ -2,7 +2,6 @@ package com.jadedpacks.jadedlibs;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -86,16 +85,13 @@ class Downloader extends JOptionPane implements IDownloader {
 		final JEditorPane ep = new JEditorPane("text/html", "<html>JadedPacks was unable to download required library " + name + "<br>Check your internet connection and try restarting or download it manually from<br><a href=\"" + url + "\">" + url + "</a> and put it in your mods folder</html>");
 		ep.setEditable(false);
 		ep.setOpaque(false);
-		ep.addHyperlinkListener(new HyperlinkListener() {
-			@Override
-			public void hyperlinkUpdate(final HyperlinkEvent event) {
-				try {
-					if(event.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
-						Desktop.getDesktop().browse(event.getURL().toURI());
-					}
-				} catch(final Exception e) {
-					e.printStackTrace();
+		ep.addHyperlinkListener(event -> {
+			try {
+				if(event.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
+					Desktop.getDesktop().browse(event.getURL().toURI());
 				}
+			} catch(final Exception e) {
+				e.printStackTrace();
 			}
 		});
 		JOptionPane.showMessageDialog(null, ep, "A download error has occured", JOptionPane.ERROR_MESSAGE);

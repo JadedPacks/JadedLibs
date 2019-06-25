@@ -7,11 +7,14 @@ buildscript {
 		}
 	}
 	dependencies {
-		classpath 'net.minecraftforge.gradle:ForgeGradle:1.0-SNAPSHOT'
+		classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
 	}
 }
 
 apply plugin: 'forge'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 new File('gradle.properties').withReader {
 	def prop = new Properties()
@@ -24,9 +27,9 @@ group = "com.jadedpacks"
 archivesBaseName = "JadedLibs"
 
 minecraft {
-	version = "${config.minecraftVersion}-${config.forgeVersion}"
-	//runDir = "run"
-	//mappings = config.mcpMappings
+	version = "${config.minecraftVersion}-${config.forgeVersion}-${config.minecraftVersion}"
+	runDir = "run"
+	mappings = config.mcpMappings
 	replace "@VERSION@", config.modVersion
 }
 

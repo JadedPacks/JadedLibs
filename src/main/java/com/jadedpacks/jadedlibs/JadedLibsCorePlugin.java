@@ -31,6 +31,11 @@ public class JadedLibsCorePlugin implements IFMLLoadingPlugin, IFMLCallHook {
 	public void injectData(final Map<String, Object> map) {}
 
 	@Override
+	public String getAccessTransformerClass() {
+		return null;
+	}
+
+	@Override
 	public Void call() {
 		load();
 		return null;
