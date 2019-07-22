@@ -90,6 +90,7 @@ class JadedLibsInst {
 		}
 		if(new File(target, ".disabled").exists()) {
 			System.out.println("File is disabled; Skipping: " + dependency.file);
+			return;
 		}
 		try {
 			final URL url = new URL(dependency.repo + dependency.file.replace(" ", "%20"));
