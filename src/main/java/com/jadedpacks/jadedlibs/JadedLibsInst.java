@@ -88,6 +88,10 @@ class JadedLibsInst {
 			System.out.println("File already exists; Skipping: " + dependency.file);
 			return;
 		}
+		if(new File(target, ".disabled").exists()) {
+			System.out.println("File is disabled; Skipping: " + dependency.file);
+			return;
+		}
 		try {
 			final URL url = new URL(dependency.repo + dependency.file.replace(" ", "%20"));
 			downloadMonitor.updateProgressString("Downloading file '" + dependency.file + "'");
