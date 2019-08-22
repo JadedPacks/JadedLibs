@@ -67,7 +67,7 @@ class JadedLibsInst {
 		downloadMonitor = isClient ? new Downloader() : new DummyDownloader();
 		JDialog popupWindow = (JDialog) downloadMonitor.makeDialog();
 		try {
-			for(final Dependency dependency : depMap) {
+			for(final Dependency dependency : new ArrayList<Dependency>(depMap)) {
 				download(dependency);
 			}
 		} finally {
@@ -79,7 +79,8 @@ class JadedLibsInst {
 	}
 
 	private void download(final Dependency dependency) {
-		if(dependency.clientOnly && isClient) {
+		depMap.remove(dependency);
+		if(dependency.clientOnly && !isClient) {
 			System.out.println("File is a clientOnly mod; Skipping: " + dependency.file);
 			return;
 		}
@@ -174,12 +175,16 @@ class JadedLibsInst {
 					FMLRelaunchLog.finest("Adding %s to the list of known coremods, it will not be examined again", coreMod.getName());
 					Field f_loadedCoremods = c.getDeclaredField("loadedCoremods");
 					f_loadedCoremods.setAccessible(true);
-					((List) f_loadedCoremods.get(null)).add(coreMod.getName());
+					if(!((List) f_loadedCoremods.get(null)).contains(coreMod.getName())) {
+						((List) f_loadedCoremods.get(null)).add(coreMod.getName());
+					}
 				} else {
 					FMLRelaunchLog.finest("Found FMLCorePluginContainsFMLMod marker in %s, it will be examined later for regular @Mod instances", coreMod.getName());
 					Field f_reparsedCoremods = c.getDeclaredField("reparsedCoremods");
 					f_reparsedCoremods.setAccessible(true);
-					((List) f_reparsedCoremods.get(null)).add(coreMod.getName());
+					if(!((List) f_reparsedCoremods.get(null)).contains(coreMod.getName())) {
+						((List) f_reparsedCoremods.get(null)).add(coreMod.getName());
+					}
 				}
 				Method m_loadCoreMod = c.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
 				m_loadCoreMod.setAccessible(true);
