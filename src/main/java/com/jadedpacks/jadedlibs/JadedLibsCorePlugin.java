@@ -8,10 +8,6 @@ import java.util.Map;
 public class JadedLibsCorePlugin implements IFMLLoadingPlugin, IFMLCallHook {
 	private JadedLibsInst inst;
 
-	public JadedLibsCorePlugin() {
-		load();
-	}
-
 	@Override
 	public String[] getASMTransformerClass() {
 		return null;

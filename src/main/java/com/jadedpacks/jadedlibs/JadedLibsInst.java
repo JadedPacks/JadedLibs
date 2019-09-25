@@ -6,11 +6,12 @@ import cpw.mods.fml.relauncher.CoreModManager;
 import cpw.mods.fml.relauncher.FMLInjectionData;
 import cpw.mods.fml.relauncher.FMLLaunchHandler;
 import cpw.mods.fml.relauncher.FMLRelaunchLog;
+import net.minecraft.launchwrapper.ITweaker;
+import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import javax.swing.*;
 import java.io.*;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -47,7 +48,6 @@ class JadedLibsInst {
 			return;
 		}
 		loadDeps();
-		activateDeps();
 	}
 
 	private void loadJSON(final File file) throws IOException {
@@ -67,7 +67,7 @@ class JadedLibsInst {
 		downloadMonitor = isClient ? new Downloader() : new DummyDownloader();
 		JDialog popupWindow = (JDialog) downloadMonitor.makeDialog();
 		try {
-			for(final Dependency dependency : new ArrayList<Dependency>(depMap)) {
+			for(final Dependency dependency : depMap) {
 				download(dependency);
 			}
 		} finally {
@@ -79,7 +79,6 @@ class JadedLibsInst {
 	}
 
 	private void download(final Dependency dependency) {
-		depMap.remove(dependency);
 		if(dependency.clientOnly && !isClient) {
 			System.out.println("File is a clientOnly mod; Skipping: " + dependency.file);
 			return;
@@ -104,6 +103,7 @@ class JadedLibsInst {
 			download(connection.getInputStream(), connection.getContentLength(), target);
 			downloadMonitor.updateProgressString("Download complete");
 			System.out.println("Download complete");
+			activateDep(dependency);
 		} catch(final Exception e) {
 			if(downloadMonitor.shouldStop()) {
 				System.err.println("You have stopped the download before it could be completed");
@@ -138,60 +138,51 @@ class JadedLibsInst {
 		}
 	}
 
-	private void activateDeps() {
-		for(final Dependency dep : depMap) {
-			File coreMod = new File(modsDir, dep.file);
-			JarFile jar = null;
-			Attributes mfAttributes;
-			try {
-				jar = new JarFile(coreMod);
-				if(jar.getManifest() == null) {
-					return;
-				}
-				mfAttributes = jar.getManifest().getMainAttributes();
-			} catch(IOException e) {
-				System.err.println("Unable to read the jar file " + dep.file + " - ignoring");
-				e.printStackTrace();
-				return;
-			} finally {
-				try {
-					if(jar != null) {
-						jar.close();
-					}
-				} catch(IOException ignored) {}
-			}
-			String fmlCorePlugin = mfAttributes.getValue("FMLCorePlugin");
-			if(fmlCorePlugin == null) {
+	private void activateDep(Dependency dep) {
+		File coreMod = new File(modsDir, dep.file);
+		JarFile jar = null;
+		Attributes mfAttributes;
+		try {
+			jar = new JarFile(coreMod);
+			if(jar.getManifest() == null) {
 				return;
 			}
+			mfAttributes = jar.getManifest().getMainAttributes();
+		} catch(IOException e) {
+			System.err.println("Unable to read the jar file " + dep.file + " - ignoring");
+			e.printStackTrace();
+			return;
+		} finally {
 			try {
-				loader.addURL(coreMod.toURI().toURL());
-			} catch(MalformedURLException e) {
-				throw new RuntimeException(e);
-			}
-			try {
-				Class<CoreModManager> c = CoreModManager.class;
-				if(!mfAttributes.containsKey(new Attributes.Name("FMLCorePluginContainsFMLMod"))) {
-					FMLRelaunchLog.finest("Adding %s to the list of known coremods, it will not be examined again", coreMod.getName());
-					Field f_loadedCoremods = c.getDeclaredField("loadedCoremods");
-					f_loadedCoremods.setAccessible(true);
-					if(!((List) f_loadedCoremods.get(null)).contains(coreMod.getName())) {
-						((List) f_loadedCoremods.get(null)).add(coreMod.getName());
-					}
-				} else {
-					FMLRelaunchLog.finest("Found FMLCorePluginContainsFMLMod marker in %s, it will be examined later for regular @Mod instances", coreMod.getName());
-					Field f_reparsedCoremods = c.getDeclaredField("reparsedCoremods");
-					f_reparsedCoremods.setAccessible(true);
-					if(!((List) f_reparsedCoremods.get(null)).contains(coreMod.getName())) {
-						((List) f_reparsedCoremods.get(null)).add(coreMod.getName());
-					}
+				if(jar != null) {
+					jar.close();
 				}
-				Method m_loadCoreMod = c.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
-				m_loadCoreMod.setAccessible(true);
-				m_loadCoreMod.invoke(null, loader, fmlCorePlugin, coreMod);
-			} catch(Exception e) {
-				throw new RuntimeException(e);
+			} catch(IOException ignored) {}
+		}
+		String fmlCorePlugin = mfAttributes.getValue("FMLCorePlugin");
+		if(fmlCorePlugin == null) {
+			return;
+		}
+		try {
+			loader.addURL(coreMod.toURI().toURL());
+		} catch(MalformedURLException e) {
+			throw new RuntimeException(e);
+		}
+		try {
+			if(!mfAttributes.containsKey(new Attributes.Name("FMLCorePluginContainsFMLMod"))) {
+				FMLRelaunchLog.finest("Adding %s to the list of known coremods, it will not be examined again", coreMod.getName());
+				CoreModManager.getLoadedCoremods().add(coreMod.getName());
+			} else {
+				FMLRelaunchLog.finest("Found FMLCorePluginContainsFMLMod marker in %s, it will be examined later for regular @Mod instances", coreMod.getName());
+				CoreModManager.getReparseableCoremods().add(coreMod.getName());
 			}
+			Method m_loadCoreMod = CoreModManager.class.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
+			m_loadCoreMod.setAccessible(true);
+			ITweaker wrap = (ITweaker) m_loadCoreMod.invoke(null, loader, fmlCorePlugin, coreMod);
+			FMLRelaunchLog.info("Calling tweak class %s", wrap.getClass().getName());
+			wrap.injectIntoClassLoader(Launch.classLoader);
+		} catch(Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 }
