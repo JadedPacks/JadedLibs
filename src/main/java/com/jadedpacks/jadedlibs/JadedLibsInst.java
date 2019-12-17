@@ -67,7 +67,7 @@ class JadedLibsInst {
 		downloadMonitor = isClient ? new Downloader() : new DummyDownloader();
 		JDialog popupWindow = (JDialog) downloadMonitor.makeDialog();
 		try {
-			for(final Dependency dependency : depMap) {
+			for(final Dependency dependency : new ArrayList<Dependency>(depMap)) {
 				download(dependency);
 			}
 		} finally {
